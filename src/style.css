@@ -28,6 +28,7 @@
 
 * {
   box-sizing: border-box;
+  border-radius: 0;
 }
 
 body {
@@ -66,7 +67,6 @@ h3 {
 section {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
   padding: 16px;
   margin-bottom: 16px;
 }
@@ -81,7 +81,6 @@ button,
 .button {
   font: inherit;
   min-height: 44px;
-  border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
@@ -131,7 +130,27 @@ legend {
   min-height: 44px;
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.row input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+summary h2 {
+  display: inline;
 }
 
 .preview {
@@ -153,7 +172,6 @@ legend {
 
 .note {
   background: var(--warn-bg);
-  border-radius: 8px;
   padding: 8px 10px;
 }
 
@@ -170,4 +188,9 @@ summary {
 
 .week {
   margin-top: 0.5rem;
+}
+
+details.house {
+  border-top: none;
+  padding: 0;
 }

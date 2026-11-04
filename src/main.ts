@@ -1,6 +1,7 @@
 import { defaultWeek, pullForWeek, weekChoices } from './app';
-import { HOUSE, REPO, type IsoDate, type PersonId, type Week } from './config';
+import { HOUSE, REPO, type HouseConfig, type IsoDate, type PersonId, type Week } from './config';
 import { isoWeek, localToday } from './dates';
+import { addPerson, nameError, removePerson, renamePerson, setEligible } from './house';
 import { deleteWeekUrl, listOpenPulls, loadHistory, newWeekUrl, type PullRequest } from './github';
 import { weekRange } from './render';
 import { scheduleOptions } from './scheduler';
@@ -13,6 +14,8 @@ const state = {
   pulls: [] as PullRequest[],
   choices: [] as IsoDate[],
   week: '' as IsoDate,
+  house: HOUSE as HouseConfig,
+  houseOpen: false,
   available: new Set<PersonId>(HOUSE.people),
   options: [] as Week[],
   index: 0,
@@ -35,14 +38,14 @@ function el<K extends keyof HTMLElementTagNameMap>(
 const weekTitle = (start: IsoDate) => `${isoWeek(start)} · ${weekRange(start)}`;
 
 function weekCard(week: Week): HTMLElement {
-  const away = HOUSE.people.filter((p) => !week.available.includes(p));
+  const away = week.house.people.filter((p) => !week.available.includes(p));
   return el(
     'div',
     { className: 'week' },
     el(
       'ul',
       {},
-      ...HOUSE.tasks
+      ...week.house.tasks
         .filter((t) => week.assignments[t.id])
         .map((t) => el('li', {}, el('strong', {}, week.assignments[t.id]), ` ${t.label}`)),
     ),
@@ -68,6 +71,119 @@ function pendingSection(): Child {
   );
 }
 
+function savedHouse(): HouseConfig {
+  return state.history.at(-1)?.house ?? HOUSE;
+}
+
+function updateHouse(house: HouseConfig) {
+  state.house = house;
+  state.options = [];
+  render();
+}
+
+function chip(label: string, checked: boolean, onToggle: (on: boolean) => void): HTMLElement {
+  return el(
+    'label',
+    { className: 'person' },
+    el('input', {
+      type: 'checkbox',
+      checked,
+      onchange: (e: Event) => onToggle((e.target as HTMLInputElement).checked),
+    }),
+    label,
+  );
+}
+
+function houseSection(): HTMLElement {
+  const changed = JSON.stringify(state.house) !== JSON.stringify(savedHouse());
+
+  const people = state.house.people.map((p) => {
+    const input = el('input', {
+      type: 'text',
+      value: p,
+      ariaLabel: `Name of ${p}`,
+      onchange: () => {
+        const to = input.value.trim();
+        const error = nameError(state.house, to, p);
+        if (error) {
+          alert(error);
+          render();
+          return;
+        }
+        if (state.available.delete(p)) state.available.add(to);
+        updateHouse(renamePerson(state.house, p, to));
+      },
+    });
+    return el(
+      'div',
+      { className: 'row' },
+      input,
+      el(
+        'button',
+        {
+          ariaLabel: `Remove ${p}`,
+          onclick: () => {
+            if (!confirm(`Remove ${p} from the house?`)) return;
+            state.available.delete(p);
+            updateHouse(removePerson(state.house, p));
+          },
+        },
+        '✕',
+      ),
+    );
+  });
+
+  const add = () => {
+    const name = prompt('Name or initials')?.trim();
+    if (!name) return;
+    const error = nameError(state.house, name);
+    if (error) return alert(error);
+    state.available.add(name);
+    updateHouse(addPerson(state.house, name));
+  };
+
+  const tasks = state.house.tasks.map((t) =>
+    el(
+      'fieldset',
+      {},
+      el('legend', {}, t.label),
+      ...state.house.people.map((p) =>
+        chip(p, t.eligible.includes(p), (on) => updateHouse(setEligible(state.house, t.id, p, on))),
+      ),
+    ),
+  );
+
+  return el(
+    'section',
+    {},
+    el(
+      'details',
+      { className: 'house', open: state.houseOpen, ontoggle: (e: Event) => (state.houseOpen = (e.target as HTMLDetailsElement).open) },
+      el('summary', {}, el('h2', {}, 'People and tasks')),
+      el('p', { className: 'muted' }, 'Changes are saved with the next week you accept. A renamed person counts as someone new.'),
+      ...people,
+      el('button', { onclick: add }, 'Add person'),
+      ...tasks,
+      changed &&
+        el(
+          'div',
+          { className: 'actions' },
+          el('p', { className: 'note' }, 'Not saved yet.'),
+          el(
+            'button',
+            {
+              onclick: () => {
+                state.available = new Set(savedHouse().people);
+                updateHouse(savedHouse());
+              },
+            },
+            'Undo changes',
+          ),
+        ),
+    ),
+  );
+}
+
 function generateSection(): HTMLElement {
   const select = el(
     'select',
@@ -82,22 +198,13 @@ function generateSection(): HTMLElement {
   );
   select.value = state.week;
 
-  const people = HOUSE.people.map((p) =>
-    el(
-      'label',
-      { className: 'person' },
-      el('input', {
-        type: 'checkbox',
-        checked: state.available.has(p),
-        onchange: (e: Event) => {
-          if ((e.target as HTMLInputElement).checked) state.available.add(p);
-          else state.available.delete(p);
-          state.options = [];
-          render();
-        },
-      }),
-      p,
-    ),
+  const people = state.house.people.map((p) =>
+    chip(p, state.available.has(p), (on) => {
+      if (on) state.available.add(p);
+      else state.available.delete(p);
+      state.options = [];
+      render();
+    }),
   );
 
   const pending = pullForWeek(state.pulls, state.week);
@@ -123,7 +230,7 @@ function generateSection(): HTMLElement {
           el('button', { onclick: regenerate }, 'Regenerate'),
           el(
             'a',
-            { className: 'button primary', href: newWeekUrl(REPO, HOUSE, option), target: '_blank', rel: 'noopener' },
+            { className: 'button primary', href: newWeekUrl(REPO, option), target: '_blank', rel: 'noopener' },
             'Accept',
           ),
         ),
@@ -169,8 +276,8 @@ function historySection(): HTMLElement {
 }
 
 function generate() {
-  const available = HOUSE.people.filter((p) => state.available.has(p));
-  state.options = scheduleOptions(HOUSE, state.history, state.week, available);
+  const available = state.house.people.filter((p) => state.available.has(p));
+  state.options = scheduleOptions(state.house, state.history, state.week, available);
   state.index = 0;
   render();
 }
@@ -186,6 +293,7 @@ function render() {
       el('header', {}, el('h1', {}, 'House Cleaning'), el('button', { onclick: load }, 'Refresh')),
       !navigator.onLine && el('p', { className: 'note' }, 'Offline: showing the last loaded data.'),
       pendingSection(),
+      houseSection(),
       generateSection(),
       historySection(),
     ]),
@@ -199,6 +307,8 @@ async function load() {
     const today = localToday();
     state.choices = weekChoices(state.history, today);
     state.week = defaultWeek(state.choices, today);
+    state.house = savedHouse();
+    state.available = new Set(state.house.people);
     state.options = [];
     render();
   } catch (e) {
