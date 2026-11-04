@@ -1,0 +1,50 @@
+name: Auto-merge schedules
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: auto-merge
+
+jobs:
+  merge:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(format(',{0},', vars.APPROVED_OWNERS), format(',{0},', github.event.pull_request.user.login))
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+      BASE: ${{ github.event.pull_request.base.ref }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - id: check
+        shell: bash
+        run: |
+          git fetch origin "$HEAD_SHA"
+          npx vite-node scripts/check-pr.ts "origin/$BASE" "$HEAD_SHA" | tee result.txt
+
+      - if: failure() && steps.check.outcome == 'failure'
+        shell: bash
+        run: |
+          { echo "Not merged automatically:"; echo; cat result.txt; } > comment.txt
+          gh pr comment "$PR" --body-file comment.txt
+
+      - run: gh pr merge "$PR" --squash --delete-branch --match-head-commit "$HEAD_SHA"
