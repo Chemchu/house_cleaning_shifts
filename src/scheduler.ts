@@ -31,7 +31,7 @@ export function scheduleOptions(
   start: IsoDate,
   available: PersonId[] = config.people,
 ): Week[] {
-  const past = history.filter((w) => w.start < start);
+  const past = history.filter((w) => w.start < start).sort((a, b) => a.start.localeCompare(b.start));
   const byStart = new Map(past.map((w) => [w.start, w]));
   const lastWeek = byStart.get(addDays(start, -7));
 
@@ -79,7 +79,7 @@ export function scheduleOptions(
         .filter(({ c }) => c.relaxed)
         .map(({ c, p }) => `${p} does ${c.task.label} for week ${c.streak(p) + 1} in a row (no one else available).`),
     ];
-    return { week: { start, available, assignments, notes }, cost };
+    return { week: { start, house: config, available, assignments, notes }, cost };
   });
 
   return options.sort((a, b) => compare(a.cost, b.cost)).map((o) => o.week);
@@ -94,19 +94,37 @@ function rank(
 ): Ranked[] {
   const load = (p: PersonId) =>
     lastWeek ? Object.values(lastWeek.assignments).filter((x) => x === p).length : 0;
-  const timesDone = (p: PersonId) => past.filter((w) => w.assignments[task.id] === p).length;
+  const counts = taskCounts(past, task);
+  const timesDone = (p: PersonId) => counts.get(p) ?? 0;
   const minDone = Math.min(...pool.map(timesDone));
 
   const key = (p: PersonId) => {
     const done = past.filter((w) => w.assignments[task.id] === p);
     const lastDone = done.reduce((max, w) => (w.start > max ? w.start : max), '');
-    const overSlack = Math.max(0, done.length - minDone - DOUBLE_SLACK);
-    return [overSlack, done.length, load(p), lastDone, config.people.indexOf(p)];
+    const overSlack = Math.max(0, timesDone(p) - minDone - DOUBLE_SLACK);
+    return [overSlack, timesDone(p), load(p), lastDone, config.people.indexOf(p)];
   };
 
   return [...pool]
     .sort((a, b) => compare(key(a), key(b)))
     .map((person) => ({ person, overSlack: key(person)[0] as number }));
+}
+
+function taskCounts(past: Week[], task: Task): Map<PersonId, number> {
+  const counts = new Map<PersonId, number>();
+  const join = (eligible: PersonId[]) => {
+    const known = eligible.filter((p) => counts.has(p)).map((p) => counts.get(p)!);
+    const start = known.length > 0 ? Math.min(...known) : 0;
+    for (const p of eligible) if (!counts.has(p)) counts.set(p, start);
+  };
+
+  for (const week of past) {
+    join(week.house.tasks.find((t) => t.id === task.id)?.eligible ?? []);
+    const person = week.assignments[task.id];
+    if (person) counts.set(person, (counts.get(person) ?? 0) + 1);
+  }
+  join(task.eligible);
+  return counts;
 }
 
 function compare(a: (number | string)[], b: (number | string)[]): number {

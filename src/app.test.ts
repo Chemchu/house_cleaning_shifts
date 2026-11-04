@@ -3,7 +3,7 @@ import { defaultWeek, pullForWeek, weekChoices } from './app';
 import { HOUSE, type Week } from './config';
 import { localToday, mondayOf } from './dates';
 
-const week = (start: string): Week => ({ start, available: HOUSE.people, assignments: {}, notes: [] });
+const week = (start: string): Week => ({ start, house: HOUSE, available: HOUSE.people, assignments: {}, notes: [] });
 
 describe('weekChoices', () => {
   it('starts after the latest merged week', () => {

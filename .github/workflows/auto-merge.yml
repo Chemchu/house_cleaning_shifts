@@ -3,6 +3,8 @@ name: Auto-merge schedules
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - 'schedules/**'
 
 permissions:
   contents: write

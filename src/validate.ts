@@ -1,5 +1,6 @@
-import type { HouseConfig, Week } from './config';
+import type { Week } from './config';
 import { isoWeek } from './dates';
+import { houseErrors } from './house';
 import { scheduleOptions } from './scheduler';
 import { parseWeekFile, weekFilePath } from './weekFile';
 
@@ -9,7 +10,7 @@ export interface Change {
   text?: string;
 }
 
-export function validateChange(config: HouseConfig, history: Week[], changes: Change[]): string[] {
+export function validateChange(history: Week[], changes: Change[]): string[] {
   if (changes.length !== 1) return [`Expected exactly one changed file, got ${changes.length}.`];
   const [change] = changes;
   const latest = history.at(-1);
@@ -36,12 +37,12 @@ export function validateChange(config: HouseConfig, history: Week[], changes: Ch
   if (latest && week.start <= latest.start) {
     errors.push(`${isoWeek(week.start)} is not after the latest week ${isoWeek(latest.start)}.`);
   }
-  const unknown = week.available.filter((p) => !config.people.includes(p));
-  if (unknown.length > 0) {
-    errors.push(`Unknown people: ${unknown.join(', ')}.`);
-  } else {
+  const unknown = week.available.filter((p) => !week.house.people.includes(p));
+  if (unknown.length > 0) errors.push(`Unknown people: ${unknown.join(', ')}.`);
+  errors.push(...houseErrors(week.house));
+  if (errors.length === 0) {
     const key = (w: Week) => JSON.stringify(Object.entries(w.assignments).sort());
-    const options = scheduleOptions(config, history, week.start, week.available);
+    const options = scheduleOptions(week.house, history, week.start, week.available);
     if (!options.some((o) => key(o) === key(week))) {
       errors.push(`${isoWeek(week.start)}: assignments are not a valid schedule for that week.`);
     }

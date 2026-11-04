@@ -15,6 +15,7 @@ export interface HouseConfig {
 
 export interface Week {
   start: IsoDate;
+  house: HouseConfig;
   available: PersonId[];
   assignments: Record<TaskId, PersonId>;
   notes: string[];
