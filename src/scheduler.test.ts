@@ -5,10 +5,14 @@ import { scheduleWeek } from './scheduler';
 
 const START = '2026-11-02';
 
-function run(weeks: number, config: HouseConfig = HOUSE, available?: PersonId[]): Week[] {
+function run(
+  weeks: number,
+  config: HouseConfig = HOUSE,
+  availableIn: (i: number) => PersonId[] = () => config.people,
+): Week[] {
   const history: Week[] = [];
   for (let i = 0; i < weeks; i++) {
-    history.push(scheduleWeek(config, history, addDays(START, 7 * i), available));
+    history.push(scheduleWeek(config, history, addDays(START, 7 * i), availableIn(i)));
   }
   return history;
 }
@@ -21,6 +25,12 @@ function counts(history: Week[], taskId: string): Record<PersonId, number> {
   }
   return result;
 }
+
+function pastWeek(offset: number, assignments: Week['assignments']): Week {
+  return { start: addDays(START, 7 * offset), available: HOUSE.people, assignments, notes: [] };
+}
+
+const without = (p: PersonId) => HOUSE.people.filter((x) => x !== p);
 
 describe('scheduleWeek', () => {
   it('only assigns eligible people', () => {
@@ -49,30 +59,24 @@ describe('scheduleWeek', () => {
   });
 
   it('never assigns someone who is not available', () => {
-    const available = HOUSE.people.filter((p) => p !== 'L');
-    const assigned = run(6, HOUSE, available).flatMap((w) => Object.values(w.assignments));
+    const assigned = run(6, HOUSE, () => without('L')).flatMap((w) => Object.values(w.assignments));
     expect(assigned).not.toContain('L');
   });
 
+  it('records who was available', () => {
+    expect(scheduleWeek(HOUSE, [], START, without('L')).available).toEqual(without('L'));
+  });
+
   it('prevents a third week in a row even if that person has done the task less', () => {
-    const history: Week[] = [0, 1, 2, 3, 4, 5].map((i) => ({
-      start: addDays(START, 7 * i),
-      assignments: { bathroom2: i < 4 ? 'G' : 'S' },
-      notes: [],
-    }));
+    const history = [0, 1, 2, 3, 4, 5].map((i) => pastWeek(i, { bathroom2: i < 4 ? 'G' : 'S' }));
     const week = scheduleWeek(HOUSE, history, addDays(START, 42));
     expect(week.assignments.bathroom2).toBe('G');
     expect(week.notes).toEqual([]);
   });
 
   it('allows a third week in a row when nobody else is available, with a note', () => {
-    const history: Week[] = [0, 1].map((i) => ({
-      start: addDays(START, 7 * i),
-      assignments: { bathroom2: 'S' },
-      notes: [],
-    }));
-    const available = HOUSE.people.filter((p) => p !== 'G');
-    const week = scheduleWeek(HOUSE, history, addDays(START, 14), available);
+    const history = [0, 1].map((i) => pastWeek(i, { bathroom2: 'S' }));
+    const week = scheduleWeek(HOUSE, history, addDays(START, 14), without('G'));
     expect(week.assignments.bathroom2).toBe('S');
     expect(week.notes).toEqual([
       'S does Cleaning Bathroom 2 for week 3 in a row (no one else available).',
@@ -96,17 +100,31 @@ describe('scheduleWeek', () => {
       ],
     };
     // X and Y have done A once each, and X longer ago, but X did two tasks last week.
-    const history: Week[] = [
-      { start: addDays(START, -21), assignments: { a: 'X' }, notes: [] },
-      { start: addDays(START, -14), assignments: { a: 'Y' }, notes: [] },
-      { start: addDays(START, -7), assignments: { b: 'X', c: 'X' }, notes: [] },
-    ];
+    const history = [pastWeek(-3, { a: 'X' }), pastWeek(-2, { a: 'Y' }), pastWeek(-1, { b: 'X', c: 'X' })];
     expect(scheduleWeek(config, history, START).assignments.a).toBe('Y');
   });
 
   it('ignores history on or after the week being scheduled', () => {
     const first = scheduleWeek(HOUSE, [], START);
-    const future: Week = { start: START, assignments: { floor: 'S' }, notes: [] };
-    expect(scheduleWeek(HOUSE, [future], START)).toEqual(first);
+    expect(scheduleWeek(HOUSE, [pastWeek(0, { floor: 'S' })], START)).toEqual(first);
+  });
+});
+
+describe('G away for three weeks', () => {
+  const history = run(12, HOUSE, (i) => (i >= 2 && i <= 4 ? without('G') : HOUSE.people));
+  const bathroom2 = history.map((w) => w.assignments.bathroom2);
+
+  it('has S cover bathroom 2 while he is away, with a note', () => {
+    expect(bathroom2.slice(0, 5)).toEqual(['G', 'S', 'S', 'S', 'S']);
+    expect(history[3].notes).toEqual([
+      'S does Cleaning Bathroom 2 for week 3 in a row (no one else available).',
+    ]);
+    expect(history[4].notes).toHaveLength(1);
+  });
+
+  it('has G catch up when back, never 3 weeks in a row', () => {
+    expect(bathroom2.slice(5)).toEqual(['G', 'G', 'S', 'G', 'G', 'S', 'G']);
+    const count = (p: PersonId) => bathroom2.filter((x) => x === p).length;
+    expect(count('G')).toBe(count('S'));
   });
 });

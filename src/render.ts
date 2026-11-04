@@ -6,17 +6,15 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-export function renderSchedule(config: HouseConfig, weeks: Week[]): string {
-  const months = [...new Set(weeks.map((w) => monthName(w.start)))];
-  const title = `# House Cleaning - ${months.join(' - ')}`;
-  return [title, ...weeks.map((w) => renderWeek(config, w))].join('\n\n') + '\n';
-}
-
 export function renderWeek(config: HouseConfig, week: Week): string {
-  const lines = [`## ${weekRange(week.start)}`, ''];
+  const lines = [`# House Cleaning - ${weekRange(week.start)}`, ''];
   for (const task of config.tasks) {
     const person = week.assignments[task.id];
     if (person) lines.push(`- ${person} -> ${taskLabel(config, task)}`);
+  }
+  const away = config.people.filter((p) => !week.available.includes(p));
+  if (away.length > 0) {
+    lines.push('', `_Away: ${joinNames(away)}_`);
   }
   if (week.notes.length > 0) {
     lines.push('', week.notes.map((n) => `> ⚠️ ${n}`).join('\n>\n'));

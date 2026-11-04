@@ -12,7 +12,7 @@ export function scheduleWeek(
 ): Week {
   const past = history.filter((w) => w.start < start);
   const byStart = new Map(past.map((w) => [w.start, w]));
-  const week: Week = { start, assignments: {}, notes: [] };
+  const week: Week = { start, available, assignments: {}, notes: [] };
 
   const candidatesFor = (task: Task) => task.eligible.filter((p) => available.includes(p));
   // Most constrained tasks first, so the floor can avoid people who already got a bathroom.

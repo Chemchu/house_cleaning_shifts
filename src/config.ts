@@ -15,21 +15,17 @@ export interface HouseConfig {
   tasks: Task[];
 }
 
-/** A person is away for every day from `from` to `to`, inclusive. */
-export interface Absence {
-  person: PersonId;
-  from: IsoDate;
-  to: IsoDate;
-}
-
 export interface Week {
   /** Monday of the week. */
   start: IsoDate;
+  /** People who could clean that week. */
+  available: PersonId[];
   assignments: Record<TaskId, PersonId>;
   /** Warnings, e.g. a streak rule that had to be relaxed. */
   notes: string[];
 }
 
+/** Initials only: this repo and its schedules are public. */
 export const HOUSE: HouseConfig = {
   people: ['C', 'G', 'I', 'L', 'S'],
   tasks: [
