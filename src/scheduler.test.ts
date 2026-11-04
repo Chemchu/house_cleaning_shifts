@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { HOUSE, type HouseConfig, type PersonId, type Week } from './config';
 import { addDays } from './dates';
-import { scheduleWeek } from './scheduler';
+import { scheduleOptions, scheduleWeek } from './scheduler';
 
 const START = '2026-11-02';
 
@@ -99,7 +99,6 @@ describe('scheduleWeek', () => {
         { id: 'c', label: 'C', eligible: ['X', 'Z'] },
       ],
     };
-    // X and Y have done A once each, and X longer ago, but X did two tasks last week.
     const history = [pastWeek(-3, { a: 'X' }), pastWeek(-2, { a: 'Y' }), pastWeek(-1, { b: 'X', c: 'X' })];
     expect(scheduleWeek(config, history, START).assignments.a).toBe('Y');
   });
@@ -126,5 +125,50 @@ describe('G away for three weeks', () => {
     expect(bathroom2.slice(5)).toEqual(['G', 'G', 'S', 'G', 'G', 'S', 'G']);
     const count = (p: PersonId) => bathroom2.filter((x) => x === p).length;
     expect(count('G')).toBe(count('S'));
+  });
+});
+
+describe('scheduleOptions', () => {
+  const history = run(4);
+  const next = addDays(START, 28);
+  const options = scheduleOptions(HOUSE, history, next);
+
+  it('starts with the same week scheduleWeek gives', () => {
+    expect(options[0]).toEqual(scheduleWeek(HOUSE, history, next));
+  });
+
+  it('lists every distinct valid combination', () => {
+    const keys = options.map((w) => JSON.stringify(w.assignments));
+    expect(new Set(keys).size).toBe(options.length);
+    expect(options.length).toBe(5 * 3 * 2);
+  });
+
+  it('only offers eligible and available people', () => {
+    for (const week of scheduleOptions(HOUSE, history, next, without('C'))) {
+      for (const task of HOUSE.tasks) {
+        expect(task.eligible).toContain(week.assignments[task.id]);
+        expect(week.assignments[task.id]).not.toBe('C');
+      }
+    }
+  });
+
+  it('never offers a third week in a row when someone else can do it', () => {
+    const streakHistory = [0, 1].map((i) => pastWeek(i, { bathroom2: 'S' }));
+    const weeks = scheduleOptions(HOUSE, streakHistory, addDays(START, 14));
+    expect(weeks.every((w) => w.assignments.bathroom2 === 'G')).toBe(true);
+  });
+
+  it('offers weeks without doubles before weeks with doubles', () => {
+    const doubles = options.map((w) => {
+      const people = Object.values(w.assignments);
+      return people.length - new Set(people).size;
+    });
+    expect(doubles).toEqual([...doubles].sort((a, b) => a - b));
+  });
+
+  it('changes the floor first, then the bathrooms', () => {
+    expect(options[1].assignments.bathroom1).toBe(options[0].assignments.bathroom1);
+    expect(options[1].assignments.bathroom2).toBe(options[0].assignments.bathroom2);
+    expect(options[1].assignments.floor).not.toBe(options[0].assignments.floor);
   });
 });
