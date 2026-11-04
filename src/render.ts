@@ -6,7 +6,8 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-export function renderWeek(config: HouseConfig, week: Week): string {
+export function renderWeek(week: Week): string {
+  const config = week.house;
   const lines = [`# House Cleaning - ${weekRange(week.start)}`, ''];
   for (const task of config.tasks) {
     const person = week.assignments[task.id];

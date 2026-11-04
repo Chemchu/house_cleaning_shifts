@@ -1,4 +1,4 @@
-import type { HouseConfig, RepoRef, Week } from './config';
+import type { RepoRef, Week } from './config';
 import { parseWeekFile, toWeekFile, weekFilePath } from './weekFile';
 
 export type Fetch = (url: string) => Promise<Response>;
@@ -43,10 +43,10 @@ export async function listOpenPulls(repo: RepoRef, fetchFn: Fetch = fetch): Prom
   return pulls.map((p) => ({ number: p.number, title: p.title, url: p.html_url, author: p.user.login }));
 }
 
-export function newWeekUrl(repo: RepoRef, config: HouseConfig, week: Week): string {
+export function newWeekUrl(repo: RepoRef, week: Week): string {
   const params = new URLSearchParams({
     filename: weekFilePath(week.start),
-    value: toWeekFile(config, week),
+    value: toWeekFile(week),
   });
   return `https://github.com/${repo.owner}/${repo.name}/new/${repo.branch}?${params}`;
 }

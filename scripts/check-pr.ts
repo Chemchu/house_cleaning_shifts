@@ -1,5 +1,4 @@
 import { execFileSync } from 'node:child_process';
-import { HOUSE } from '../src/config';
 import { validateChange, type Change } from '../src/validate';
 import { parseWeekFile } from '../src/weekFile';
 
@@ -17,7 +16,7 @@ const changes: Change[] = lines(git('diff', '--name-status', '--no-renames', `${
   return { status, path, text: status === 'A' ? git('show', `${head}:${path}`) : undefined };
 });
 
-const errors = validateChange(HOUSE, history, changes);
+const errors = validateChange(history, changes);
 if (errors.length > 0) {
   console.log(errors.map((e) => `- ${e}`).join('\n'));
   process.exit(1);

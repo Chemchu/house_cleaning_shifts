@@ -16,11 +16,12 @@ describe('renderWeek', () => {
   it('lists each task with who shares it', () => {
     const week: Week = {
       start: '2026-11-02',
+      house: HOUSE,
       available: HOUSE.people,
       assignments: { floor: 'G', bathroom1: 'L', bathroom2: 'G' },
       notes: [],
     };
-    expect(renderWeek(HOUSE, week)).toBe(
+    expect(renderWeek(week)).toBe(
       [
         '# House Cleaning - 02-08 November',
         '',
@@ -34,11 +35,12 @@ describe('renderWeek', () => {
   it('adds who is away and notes as warnings after the tasks', () => {
     const week: Week = {
       start: '2026-11-23',
+      house: HOUSE,
       available: ['C', 'I', 'S'],
       assignments: { floor: 'C', bathroom1: 'I', bathroom2: 'S' },
       notes: ['First note.', 'Second note.'],
     };
-    expect(renderWeek(HOUSE, week)).toBe(
+    expect(renderWeek(week)).toBe(
       [
         '# House Cleaning - 23-29 November',
         '',

@@ -9,6 +9,7 @@ const RAW = 'https://raw.githubusercontent.com/me/house/main';
 
 const week = (start: string, floor: string): Week => ({
   start,
+  house: HOUSE,
   available: HOUSE.people,
   assignments: { floor },
   notes: [],
@@ -31,8 +32,8 @@ describe('loadHistory', () => {
         { name: 'README.md', path: 'schedules/README.md', type: 'file' },
         { name: 'old', path: 'schedules/old', type: 'dir' },
       ],
-      [`${RAW}/schedules/2026-W45.md`]: toWeekFile(HOUSE, week('2026-11-02', 'G')),
-      [`${RAW}/schedules/2026-W46.md`]: toWeekFile(HOUSE, week('2026-11-09', 'S')),
+      [`${RAW}/schedules/2026-W45.md`]: toWeekFile(week('2026-11-02', 'G')),
+      [`${RAW}/schedules/2026-W46.md`]: toWeekFile(week('2026-11-09', 'S')),
     });
     const history = await loadHistory(REPO, fetchFn);
     expect(history.map((w) => w.start)).toEqual(['2026-11-02', '2026-11-09']);
@@ -76,7 +77,7 @@ describe('editor links', () => {
   const w = week('2026-11-30', 'C');
 
   it('pre-fill the new file page with the week file', () => {
-    const url = new URL(newWeekUrl(REPO, HOUSE, w));
+    const url = new URL(newWeekUrl(REPO, w));
     expect(url.origin + url.pathname).toBe('https://github.com/me/house/new/main');
     expect(url.searchParams.get('filename')).toBe('schedules/2026-W49.md');
     expect(parseWeekFile(url.searchParams.get('value')!)).toEqual(w);
