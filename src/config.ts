@@ -25,6 +25,15 @@ export interface Week {
   notes: string[];
 }
 
+export interface RepoRef {
+  owner: string;
+  name: string;
+  branch: string;
+}
+
+/** Where the merged schedules live. */
+export const REPO: RepoRef = { owner: 'Chemchu', name: 'house_cleaning_shifts', branch: 'main' };
+
 /** Initials only: this repo and its schedules are public. */
 export const HOUSE: HouseConfig = {
   people: ['C', 'G', 'I', 'L', 'S'],
