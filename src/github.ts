@@ -1,12 +1,6 @@
 import type { HouseConfig, RepoRef, Week } from './config';
 import { parseWeekFile, toWeekFile, weekFilePath } from './weekFile';
 
-/**
- * Reads use the public, unauthenticated API (60 requests/hour per IP).
- * Writes never happen here: we open GitHub's own web editor, so the PR is
- * created by whoever is signed in to github.com, without any token in the app.
- */
-
 export type Fetch = (url: string) => Promise<Response>;
 
 export interface PullRequest {
@@ -18,7 +12,6 @@ export interface PullRequest {
 
 const WEEK_FILE = /^\d{4}-W\d{2}\.md$/;
 
-/** All merged weeks on the branch, oldest first. */
 export async function loadHistory(repo: RepoRef, fetchFn: Fetch = fetch): Promise<Week[]> {
   const res = await fetchFn(
     `https://api.github.com/repos/${repo.owner}/${repo.name}/contents/schedules?ref=${repo.branch}`,
@@ -43,7 +36,6 @@ export async function loadHistory(repo: RepoRef, fetchFn: Fetch = fetch): Promis
   return weeks.sort((a, b) => a.start.localeCompare(b.start));
 }
 
-/** Open PRs, so the app can warn that the history may be about to change. */
 export async function listOpenPulls(repo: RepoRef, fetchFn: Fetch = fetch): Promise<PullRequest[]> {
   const res = await fetchFn(`https://api.github.com/repos/${repo.owner}/${repo.name}/pulls?state=open`);
   const pulls: { number: number; title: string; html_url: string; user: { login: string } }[] =
@@ -51,7 +43,6 @@ export async function listOpenPulls(repo: RepoRef, fetchFn: Fetch = fetch): Prom
   return pulls.map((p) => ({ number: p.number, title: p.title, url: p.html_url, author: p.user.login }));
 }
 
-/** GitHub's "create new file" page, pre-filled with the week file. */
 export function newWeekUrl(repo: RepoRef, config: HouseConfig, week: Week): string {
   const params = new URLSearchParams({
     filename: weekFilePath(week.start),
@@ -60,7 +51,6 @@ export function newWeekUrl(repo: RepoRef, config: HouseConfig, week: Week): stri
   return `https://github.com/${repo.owner}/${repo.name}/new/${repo.branch}?${params}`;
 }
 
-/** GitHub's "delete file" page for a week. */
 export function deleteWeekUrl(repo: RepoRef, week: Week): string {
   return `https://github.com/${repo.owner}/${repo.name}/delete/${repo.branch}/${weekFilePath(week.start)}`;
 }

@@ -1,12 +1,10 @@
 export type PersonId = string;
 export type TaskId = string;
-/** Calendar date as `YYYY-MM-DD`. */
 export type IsoDate = string;
 
 export interface Task {
   id: TaskId;
   label: string;
-  /** People allowed to do this task. Fairness is balanced only within this group. */
   eligible: PersonId[];
 }
 
@@ -16,12 +14,9 @@ export interface HouseConfig {
 }
 
 export interface Week {
-  /** Monday of the week. */
   start: IsoDate;
-  /** People who could clean that week. */
   available: PersonId[];
   assignments: Record<TaskId, PersonId>;
-  /** Warnings, e.g. a streak rule that had to be relaxed. */
   notes: string[];
 }
 
@@ -31,10 +26,8 @@ export interface RepoRef {
   branch: string;
 }
 
-/** Where the merged schedules live. */
 export const REPO: RepoRef = { owner: 'Chemchu', name: 'house_cleaning_shifts', branch: 'main' };
 
-/** Initials only: this repo and its schedules are public. */
 export const HOUSE: HouseConfig = {
   people: ['C', 'G', 'I', 'L', 'S'],
   tasks: [

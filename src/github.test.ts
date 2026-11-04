@@ -14,7 +14,6 @@ const week = (start: string, floor: string): Week => ({
   notes: [],
 });
 
-/** Serves fixed responses by URL; anything else is a 404. */
 function fakeFetch(routes: Record<string, unknown>): Fetch {
   return async (url) => {
     if (!(url in routes)) return new Response('Not Found', { status: 404 });

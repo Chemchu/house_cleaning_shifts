@@ -22,7 +22,6 @@ export function renderWeek(config: HouseConfig, week: Week): string {
   return lines.join('\n');
 }
 
-/** `02-08 November`, or `30 November-06 December` when the week crosses months. */
 export function weekRange(monday: IsoDate): string {
   const sunday = addDays(monday, 6);
   const day = (d: IsoDate) => d.slice(8, 10);
@@ -32,7 +31,6 @@ export function weekRange(monday: IsoDate): string {
   return `${day(monday)} ${monthName(monday)}-${day(sunday)} ${monthName(sunday)}`;
 }
 
-/** Adds `(shared between …)` for tasks that only part of the house does. */
 function taskLabel(config: HouseConfig, task: Task): string {
   if (task.eligible.length === config.people.length) return task.label;
   return `${task.label} (shared between ${joinNames(task.eligible)})`;

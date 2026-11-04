@@ -9,17 +9,12 @@ export function weekFilePath(start: IsoDate): string {
   return `schedules/${isoWeek(start)}.md`;
 }
 
-/**
- * The app only reads the metadata comment on the first line; the rest is for people.
- * `>` is escaped so the JSON can never close the comment early.
- */
 export function toWeekFile(config: HouseConfig, week: Week): string {
   const { start, available, assignments, notes } = week;
   const json = JSON.stringify({ version: VERSION, start, available, assignments, notes });
   return `<!-- house-cleaning ${json.replace(/>/g, '\\u003e')} -->\n${renderWeek(config, week)}\n`;
 }
 
-/** Throws if the metadata is missing or malformed. */
 export function parseWeekFile(text: string): Week {
   const match = text.match(META);
   if (!match) throw new Error('Missing house-cleaning metadata comment');
