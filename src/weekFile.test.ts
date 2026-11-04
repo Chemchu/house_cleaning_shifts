@@ -10,8 +10,8 @@ const week: Week = {
 };
 
 describe('week files', () => {
-  it('are stored by Monday date', () => {
-    expect(weekFilePath('2026-11-16')).toBe('schedules/2026-11-16.md');
+  it('are named by ISO week', () => {
+    expect(weekFilePath('2026-11-16')).toBe('schedules/2026-W47.md');
   });
 
   it('start with a metadata comment followed by the readable schedule', () => {

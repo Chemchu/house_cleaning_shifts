@@ -1,11 +1,12 @@
 import type { HouseConfig, IsoDate, Week } from './config';
+import { isoWeek } from './dates';
 import { renderWeek } from './render';
 
 const VERSION = 1;
 const META = /^<!-- house-cleaning (\{.*\}) -->$/m;
 
 export function weekFilePath(start: IsoDate): string {
-  return `schedules/${start}.md`;
+  return `schedules/${isoWeek(start)}.md`;
 }
 
 /**
