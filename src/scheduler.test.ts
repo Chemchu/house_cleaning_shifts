@@ -27,7 +27,7 @@ function counts(history: Week[], taskId: string): Record<PersonId, number> {
 }
 
 function pastWeek(offset: number, assignments: Week['assignments']): Week {
-  return { start: addDays(START, 7 * offset), available: HOUSE.people, assignments, notes: [] };
+  return { start: addDays(START, 7 * offset), house: HOUSE, available: HOUSE.people, assignments, notes: [] };
 }
 
 const without = (p: PersonId) => HOUSE.people.filter((x) => x !== p);
@@ -170,5 +170,33 @@ describe('scheduleOptions', () => {
     expect(options[1].assignments.bathroom1).toBe(options[0].assignments.bathroom1);
     expect(options[1].assignments.bathroom2).toBe(options[0].assignments.bathroom2);
     expect(options[1].assignments.floor).not.toBe(options[0].assignments.floor);
+  });
+});
+
+describe('changing who does a task', () => {
+  const history = run(12);
+
+  it('starts a newcomer level with the lowest count in the group', () => {
+    const house: HouseConfig = {
+      ...HOUSE,
+      tasks: HOUSE.tasks.map((t) => (t.id === 'bathroom2' ? { ...t, eligible: ['G', 'I', 'S'] } : t)),
+    };
+    const weeks = [...history];
+    for (let i = 12; i < 24; i++) weeks.push(scheduleWeek(house, weeks, addDays(START, 7 * i)));
+    const bathroom2 = Object.values(counts(weeks.slice(12), 'bathroom2'));
+    expect(bathroom2).toHaveLength(3);
+    expect(Math.max(...bathroom2) - Math.min(...bathroom2)).toBeLessThanOrEqual(2);
+  });
+
+  it('treats a renamed person as someone new', () => {
+    const house: HouseConfig = {
+      people: ['Carlos', 'G', 'I', 'L', 'S'],
+      tasks: HOUSE.tasks.map((t) => ({ ...t, eligible: t.eligible.map((p) => (p === 'C' ? 'Carlos' : p)) })),
+    };
+    const weeks = [...history];
+    for (let i = 12; i < 27; i++) weeks.push(scheduleWeek(house, weeks, addDays(START, 7 * i)));
+    const floor = counts(weeks.slice(12), 'floor');
+    expect(Object.keys(floor).sort()).toEqual(['Carlos', 'G', 'I', 'L', 'S']);
+    expect(Math.max(...Object.values(floor)) - Math.min(...Object.values(floor))).toBeLessThanOrEqual(2);
   });
 });
