@@ -3,7 +3,7 @@ import { HOUSE, REPO, type HouseConfig, type IsoDate, type PersonId, type Week }
 import { isoWeek, localToday } from './dates';
 import { addPerson, nameError, removePerson, renamePerson, setEligible } from './house';
 import { deleteWeekUrl, listOpenPulls, loadHistory, newWeekUrl, type PullRequest } from './github';
-import { weekRange } from './render';
+import { weekRange, whatsappText } from './render';
 import { scheduleOptions } from './scheduler';
 import './style.css';
 
@@ -36,6 +36,25 @@ function el<K extends keyof HTMLElementTagNameMap>(
 }
 
 const weekTitle = (start: IsoDate) => `${isoWeek(start)} · ${weekRange(start)}`;
+
+function copyButton(week: Week): HTMLElement {
+  const button = el(
+    'button',
+    {
+      onclick: async () => {
+        try {
+          await navigator.clipboard.writeText(whatsappText(week));
+          button.textContent = 'Copied';
+          setTimeout(() => (button.textContent = 'Copy'), 2000);
+        } catch {
+          alert('Could not copy to the clipboard.');
+        }
+      },
+    },
+    'Copy',
+  );
+  return button;
+}
 
 function weekCard(week: Week): HTMLElement {
   const away = week.house.people.filter((p) => !week.available.includes(p));
@@ -228,6 +247,7 @@ function generateSection(): HTMLElement {
           'div',
           { className: 'actions' },
           el('button', { onclick: regenerate }, 'Regenerate'),
+          copyButton(option),
           el(
             'a',
             { className: 'button primary', href: newWeekUrl(REPO, option), target: '_blank', rel: 'noopener' },
@@ -256,20 +276,25 @@ function historySection(): HTMLElement {
         { open: w === latest },
         el('summary', {}, weekTitle(w.start)),
         weekCard(w),
-        w === latest &&
-          el(
-            'a',
-            {
-              className: 'button danger',
-              href: deleteWeekUrl(REPO, w),
-              target: '_blank',
-              rel: 'noopener',
-              onclick: (e: Event) => {
-                if (!confirm(`Open a PR that deletes ${isoWeek(w.start)}?`)) e.preventDefault();
+        el(
+          'div',
+          { className: 'actions' },
+          copyButton(w),
+          w === latest &&
+            el(
+              'a',
+              {
+                className: 'button danger',
+                href: deleteWeekUrl(REPO, w),
+                target: '_blank',
+                rel: 'noopener',
+                onclick: (e: Event) => {
+                  if (!confirm(`Open a PR that deletes ${isoWeek(w.start)}?`)) e.preventDefault();
+                },
               },
-            },
-            'Undo',
-          ),
+              'Undo',
+            ),
+        ),
       ),
     ),
   );

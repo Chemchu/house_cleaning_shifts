@@ -23,6 +23,23 @@ export function renderWeek(week: Week): string {
   return lines.join('\n');
 }
 
+export function whatsappText(week: Week): string {
+  const config = week.house;
+  const lines = [`*House Cleaning - ${weekRange(week.start)}*`, ''];
+  for (const task of config.tasks) {
+    const person = week.assignments[task.id];
+    if (person) lines.push(`- *${person}*: ${taskLabel(config, task)}`);
+  }
+  const away = config.people.filter((p) => !week.available.includes(p));
+  if (away.length > 0) {
+    lines.push('', `_Away: ${joinNames(away)}_`);
+  }
+  if (week.notes.length > 0) {
+    lines.push('', ...week.notes.map((n) => `Note: ${n}`));
+  }
+  return lines.join('\n');
+}
+
 export function weekRange(monday: IsoDate): string {
   const sunday = addDays(monday, 6);
   const day = (d: IsoDate) => d.slice(8, 10);

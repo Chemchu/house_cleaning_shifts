@@ -106,7 +106,6 @@ select {
 .danger {
   color: var(--danger);
   border-color: var(--danger);
-  margin-top: 0.5rem;
 }
 
 fieldset {

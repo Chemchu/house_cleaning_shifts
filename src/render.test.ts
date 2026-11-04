@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { HOUSE, type Week } from './config';
-import { renderWeek, weekRange } from './render';
+import { renderWeek, weekRange, whatsappText } from './render';
 
 describe('weekRange', () => {
   it('formats a week inside one month', () => {
@@ -53,6 +53,32 @@ describe('renderWeek', () => {
         '> ⚠️ First note.',
         '>',
         '> ⚠️ Second note.',
+      ].join('\n'),
+    );
+  });
+});
+
+describe('whatsappText', () => {
+  it('uses WhatsApp formatting and no emojis', () => {
+    const week: Week = {
+      start: '2026-11-23',
+      house: HOUSE,
+      available: ['C', 'I', 'S'],
+      assignments: { floor: 'C', bathroom1: 'I', bathroom2: 'S' },
+      notes: ['First note.', 'Second note.'],
+    };
+    expect(whatsappText(week)).toBe(
+      [
+        '*House Cleaning - 23-29 November*',
+        '',
+        '- *C*: Vacuum and disinfect common areas floor',
+        '- *I*: Cleaning Bathroom 1 (shared between C, I and L)',
+        '- *S*: Cleaning Bathroom 2 (shared between G and S)',
+        '',
+        '_Away: G and L_',
+        '',
+        'Note: First note.',
+        'Note: Second note.',
       ].join('\n'),
     );
   });
