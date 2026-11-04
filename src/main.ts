@@ -184,6 +184,7 @@ function render() {
   app.replaceChildren(
     ...compact([
       el('header', {}, el('h1', {}, 'House Cleaning'), el('button', { onclick: load }, 'Refresh')),
+      !navigator.onLine && el('p', { className: 'note' }, 'Offline: showing the last loaded data.'),
       pendingSection(),
       generateSection(),
       historySection(),
@@ -206,6 +207,13 @@ async function load() {
       el('button', { onclick: load }, 'Retry'),
     );
   }
+}
+
+window.addEventListener('online', render);
+window.addEventListener('offline', render);
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js');
 }
 
 load();
